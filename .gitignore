@@ -1,0 +1,23 @@
+# Keil MDK
+*.axf
+*.d
+*.dep
+*.i
+*.lst
+*.o
+*.map
+*.htm
+Listings/
+Objects/
+RTE/
+
+# DebugConfig
+DebugConfig/
+
+# VSCode
+.vscode/
+
+# System
+.DS_Store
+Thumbs.db
+desktop.ini
