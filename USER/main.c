@@ -71,12 +71,6 @@ int main(void)
     Gyro_Calibrate();
     tick_prev = DWT_CYCCNT;
 
-    /* 启动测试：直走 1 秒，确认电机正常 */
-    Motor_SetSpeed(-SPD_BASE, -SPD_BASE);
-    delay_us(1000000);
-    Motor_SetSpeed(0, 0);
-    delay_us(500000);
-
     while (1) {
 
         /* 时间差 */
