@@ -20,3 +20,17 @@ void delay_ms(uint32_t ms)
     SysTick->CTRL &= ~SysTick_CTRL_ENABLE_Msk;
     SysTick->VAL = 0x00;
 }
+
+void DWT_Init(void)
+{
+    CoreDebug->DEMCR |= CoreDebug_DEMCR_TRCENA_Msk;
+    DWT_CYCCNT = 0;
+    DWT_CTRL |= DWT_CTRL_CYCCNTENA;
+}
+
+void delay_us(uint32_t us)
+{
+    uint32_t start = DWT_CYCCNT;
+    uint32_t ticks = us * (SystemCoreClock / 1000000);
+    while ((DWT_CYCCNT - start) < ticks);
+}

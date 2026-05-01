@@ -416,6 +416,16 @@
               <FilePath>.\USER\trace.c</FilePath>
             </File>
             <File>
+              <FileName>mpu6050.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\USER\mpu6050.c</FilePath>
+            </File>
+            <File>
+              <FileName>mpu6050.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>.\USER\mpu6050.h</FilePath>
+            </File>
+            <File>
               <FileName>delay.h</FileName>
               <FileType>5</FileType>
               <FilePath>.\USER\delay.h</FilePath>
