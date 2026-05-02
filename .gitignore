@@ -1,0 +1,36 @@
+# Keil MDK
+*.axf
+*.d
+*.dep
+*.i
+*.lst
+*.o
+*.map
+*.htm
+*.crf
+*.lnp
+*.elf
+*.bin
+*.hex
+*.build_log.htm
+Listings/
+Objects/
+RTE/
+
+# Keil user-specific
+*.uvguix.*
+*.uvoptx
+
+# DebugConfig
+DebugConfig/
+
+# VSCode
+.vscode/
+
+# Claude
+.claude/
+
+# System
+.DS_Store
+Thumbs.db
+desktop.ini
