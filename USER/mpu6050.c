@@ -1,12 +1,12 @@
 #include "mpu6050.h"
 #include "delay.h"
 
-/* ---------- Pin definitions (PB4-SCL, PB5-SDA, avoids TIM4 encoder conflict) ---------- */
-#define SCL_H   GPIO_SetBits(GPIOB, GPIO_Pin_4)
-#define SCL_L   GPIO_ResetBits(GPIOB, GPIO_Pin_4)
-#define SDA_H   GPIO_SetBits(GPIOB, GPIO_Pin_5)
-#define SDA_L   GPIO_ResetBits(GPIOB, GPIO_Pin_5)
-#define SDA_RD  GPIO_ReadInputDataBit(GPIOB, GPIO_Pin_5)
+/* ---------- Pin definitions (PB1-SCL, PB2-SDA, no JTAG conflict) ---------- */
+#define SCL_H   GPIO_SetBits(GPIOB, GPIO_Pin_1)
+#define SCL_L   GPIO_ResetBits(GPIOB, GPIO_Pin_1)
+#define SDA_H   GPIO_SetBits(GPIOB, GPIO_Pin_2)
+#define SDA_L   GPIO_ResetBits(GPIOB, GPIO_Pin_2)
+#define SDA_RD  GPIO_ReadInputDataBit(GPIOB, GPIO_Pin_2)
 
 #define MPU6050_ADDR  0xD0  // 0x68 << 1
 
@@ -15,7 +15,7 @@ static GPIO_InitTypeDef sda_gpio;
 
 static void SDA_OUT(void)
 {
-    sda_gpio.GPIO_Pin   = GPIO_Pin_5;
+    sda_gpio.GPIO_Pin   = GPIO_Pin_2;
     sda_gpio.GPIO_Mode  = GPIO_Mode_Out_OD;
     sda_gpio.GPIO_Speed = GPIO_Speed_2MHz;
     GPIO_Init(GPIOB, &sda_gpio);
@@ -23,7 +23,7 @@ static void SDA_OUT(void)
 
 static void SDA_IN(void)
 {
-    sda_gpio.GPIO_Pin   = GPIO_Pin_5;
+    sda_gpio.GPIO_Pin   = GPIO_Pin_2;
     sda_gpio.GPIO_Mode  = GPIO_Mode_IPU;
     sda_gpio.GPIO_Speed = GPIO_Speed_2MHz;
     GPIO_Init(GPIOB, &sda_gpio);
@@ -144,14 +144,14 @@ void MPU6050_Init(void)
 
     RCC_APB2PeriphClockCmd(RCC_APB2Periph_GPIOB, ENABLE);
 
-    // SCL: open-drain output (PB4)
-    gpio.GPIO_Pin   = GPIO_Pin_4;
+    // SCL: open-drain output (PB1)
+    gpio.GPIO_Pin   = GPIO_Pin_1;
     gpio.GPIO_Mode  = GPIO_Mode_Out_OD;
     gpio.GPIO_Speed = GPIO_Speed_2MHz;
     GPIO_Init(GPIOB, &gpio);
 
-    // SDA: open-drain output (PB5)
-    gpio.GPIO_Pin   = GPIO_Pin_5;
+    // SDA: open-drain output (PB2)
+    gpio.GPIO_Pin   = GPIO_Pin_2;
     GPIO_Init(GPIOB, &gpio);
 
     SCL_H; SDA_H;

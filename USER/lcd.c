@@ -1,6 +1,7 @@
 #include "lcd.h"
 #include "delay.h"
 #include "debug.h"
+#include "cn_font.h"
 #include <string.h>
 
 /* FSMC Bank1 Sector4 (NE4): base = 0x6C000000
@@ -804,4 +805,77 @@ void LCD_DrawButton(uint16_t x, uint16_t y, uint16_t w, uint16_t h, const char *
     tx = x + (w - tw) / 2;
     ty = y + (h - 16) / 2;
     LCD_ShowString(tx, ty, text, fg, bg, 16);
+}
+
+/* ========== Chinese character rendering ========== */
+
+static const uint8_t *CN_Lookup(const uint8_t *gb_ch)
+{
+    uint16_t i;
+    for (i = 0; i < CN_FONT_COUNT; i++) {
+        if (cn_font_str[i * 2] == gb_ch[0] &&
+            cn_font_str[i * 2 + 1] == gb_ch[1]) {
+            return cn_font_data[i];
+        }
+    }
+    return NULL;
+}
+
+void LCD_ShowChinese(uint16_t x, uint16_t y, const char *gb_ch, uint16_t color, uint16_t bg)
+{
+    const uint8_t *p = CN_Lookup((const uint8_t *)gb_ch);
+    uint8_t row;
+
+    if (p == NULL) return;
+
+    LCD_SetWindow(x, y, x + 15, y + 15);
+    for (row = 0; row < 16; row++) {
+        uint8_t b1 = p[row * 2];
+        uint8_t b2 = p[row * 2 + 1];
+        uint8_t bit;
+        for (bit = 0; bit < 8; bit++)
+            LCD->RAM = (b1 & (0x80 >> bit)) ? color : bg;
+        for (bit = 0; bit < 8; bit++)
+            LCD->RAM = (b2 & (0x80 >> bit)) ? color : bg;
+    }
+}
+
+void LCD_ShowMixedString(uint16_t x, uint16_t y, const char *str, uint16_t color, uint16_t bg)
+{
+    while (*str) {
+        if ((uint8_t)*str < 0x80) {
+            /* ASCII character: 8 pixels wide */
+            LCD_ShowChar(x, y, *str, color, bg, 16);
+            x += 8;
+            str++;
+        } else {
+            /* Chinese character (GB2312, 2 bytes): 16 pixels wide */
+            LCD_ShowChinese(x, y, str, color, bg);
+            x += 16;
+            str += 2;
+        }
+    }
+}
+
+void LCD_DrawButtonCN(uint16_t x, uint16_t y, uint16_t w, uint16_t h, const char *text, uint16_t fg, uint16_t bg)
+{
+    uint16_t tw = 0;
+    const char *p = text;
+
+    /* Draw filled rectangle with border */
+    LCD_FillRect(x + 2, y + 2, w - 4, h - 4, bg);
+    LCD_DrawRect(x, y, w, h, fg);
+
+    /* Calculate text width: ASCII=8px, Chinese=16px */
+    while (*p) {
+        if ((uint8_t)*p < 0x80) { tw += 8; p++; }
+        else { tw += 16; p += 2; }
+    }
+
+    /* Center text */
+    {
+        uint16_t tx = x + (w - tw) / 2;
+        uint16_t ty = y + (h - 16) / 2;
+        LCD_ShowMixedString(tx, ty, text, fg, bg);
+    }
 }

@@ -36,6 +36,11 @@ void LCD_ShowString(uint16_t x, uint16_t y, const char *str, uint16_t color, uin
 void LCD_ShowNum(uint16_t x, uint16_t y, int32_t num, uint8_t len, uint16_t color, uint16_t bg, uint8_t size);
 void LCD_DrawButton(uint16_t x, uint16_t y, uint16_t w, uint16_t h, const char *text, uint16_t fg, uint16_t bg);
 
+/* Chinese character support (16x16, SimHei) */
+void LCD_ShowChinese(uint16_t x, uint16_t y, const char *utf8_ch, uint16_t color, uint16_t bg);
+void LCD_ShowMixedString(uint16_t x, uint16_t y, const char *str, uint16_t color, uint16_t bg);
+void LCD_DrawButtonCN(uint16_t x, uint16_t y, uint16_t w, uint16_t h, const char *text, uint16_t fg, uint16_t bg);
+
 /* Low-level (used by touch calibration) */
 void LCD_WR_REG(uint16_t reg);
 void LCD_WR_DATA(uint16_t data);

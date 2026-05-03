@@ -6,7 +6,7 @@
 #include "delay.h"
 #include "debug.h"
 
-/* ---- 陀螺仪参数 ---- */
+/* ---- Gyro parameters ---- */
 #define GYRO_SCALE     0.01527f
 #define INTEG_THRESH   1.0f
 #define LOST_ANGLE     30.0f
@@ -14,7 +14,10 @@
 #define LOST_PWM_MIN   80
 #define LOST_PWM_MAX   250
 
-/* ---- 内部状态 ---- */
+/* ---- 8-channel sensor threshold (adjust after testing) ---- */
+#define GS_THRESHOLD   2000
+
+/* ---- Internal state ---- */
 uint8_t current_mode = MODE_STOP;
 
 static float    gyro_bias;
@@ -22,13 +25,21 @@ static float    yaw_angle = 0.0f;
 static int16_t  SPD_BASE   = 200;
 static int16_t  SPD_SLIGHT = 75;
 static int16_t  SPD_STRONG = 150;
-static uint8_t  gs_val;
+static uint16_t gs_raw[GS_CHANNELS];   /* raw ADC values (0-4095) */
 static uint8_t  lost_flag = 0;
 static uint8_t  last_seen = 0;
 static float    lost_yaw = 0.0f;
 static float    target_offset = 0.0f;
 
-/* ---- 工具函数 ---- */
+/* ---- Gyro straight state ---- */
+#define GYRO_STRAIGHT_KP  5.0f
+
+static uint8_t  gyro_straight_running = 0;
+static float    gyro_straight_target  = 0.0f;
+static int16_t  gyro_straight_speed   = 200;
+static int16_t  gyro_straight_output  = 0;
+
+/* ---- Utility ---- */
 static int16_t clamp_pwm(int16_t v)
 {
     if (v >  LOST_PWM_MAX) return  LOST_PWM_MAX;
@@ -38,7 +49,7 @@ static int16_t clamp_pwm(int16_t v)
     return v;
 }
 
-/* ========== 公共接口 ========== */
+/* ========== Public API ========== */
 
 void Tracking_Init(void)
 {
@@ -48,6 +59,12 @@ void Tracking_Init(void)
     Debug_Printf("Grayscale OK\r\n");
     MPU6050_Init();
     Debug_Printf("MPU6050 OK\r\n");
+
+    if (MPU6050_Check()) {
+        Debug_Printf("MPU6050 detected\r\n");
+    } else {
+        Debug_Printf("ERROR: MPU6050 not found! Check PB1(SCL)/PB2(SDA)\r\n");
+    }
 }
 
 void Tracking_Gyro_Calibrate(void)
@@ -55,8 +72,8 @@ void Tracking_Gyro_Calibrate(void)
     int32_t sum = 0;
     uint16_t i;
 
-    LCD_ShowString(280, 220, "Calibrating gyro...", YELLOW, BLACK, 16);
-    LCD_ShowString(330, 245, "Keep still!", RED, BLACK, 16);
+    LCD_ShowMixedString(280, 220, "������У׼��...", YELLOW, BLACK);
+    LCD_ShowMixedString(330, 245, "�뱣�־�ֹ!", RED, BLACK);
 
     for (i = 0; i < 500; i++) {
         sum += MPU6050_ReadGyroZ();
@@ -81,7 +98,9 @@ void Tracking_UpdateGyro(uint32_t dt_us)
 void Tracking_Run(uint32_t dt_us)
 {
     int16_t pwm_l, pwm_r, pwm;
-    uint8_t SL, LM, M, RM, SR;
+    float error;
+    uint8_t any_on = 0;
+    uint8_t i;
 
     (void)dt_us;
 
@@ -91,45 +110,59 @@ void Tracking_Run(uint32_t dt_us)
         return;
     }
 
-    /* 读取灰度传感器 */
-    gs_val = Grayscale_Read();
-    SL = (gs_val >> 4) & 1;
-    LM = (gs_val >> 3) & 1;
-    M  = (gs_val >> 2) & 1;
-    RM = (gs_val >> 1) & 1;
-#if SR_BROKEN
-    SR = 0;
-#else
-    SR = (gs_val >> 0) & 1;
-#endif
+    /* Read all 8 channels */
+    Grayscale_ReadAll(gs_raw);
 
-    if (SL || LM || M || RM || SR) {
-        /* 检测到线：加权平均循迹 */
+    /* Weighted average: CH1=-3.5 ... CH8=+3.5
+     * Weights: -7, -5, -3, -1, +1, +3, +5, +7 (x2 to avoid float)
+     * Use analog: on_track = (GS_THRESHOLD - raw) / GS_THRESHOLD (0~1)
+     * Black line = low ADC value
+     */
+    {
+        int32_t weighted_sum = 0;
+        int32_t weight_norm = 0;
+        static const int8_t weights[8] = {7, 5, 3, 1, -1, -3, -5, -7};
+
+        for (i = 0; i < GS_CHANNELS; i++) {
+            if (gs_raw[i] < GS_THRESHOLD) {
+                /* On the line: strength = how dark (0=white, GS_THRESHOLD=black) */
+                int32_t strength = GS_THRESHOLD - gs_raw[i];
+                weighted_sum += weights[i] * strength;
+                weight_norm += strength;
+                any_on = 1;
+            }
+        }
+
+        if (any_on && weight_norm > 0) {
+            error = (float)weighted_sum / (float)weight_norm;
+        } else {
+            error = 0.0f;
+        }
+    }
+
+    if (any_on) {
+        /* Line detected: weighted tracking */
         lost_flag = 0;
-        last_seen = (SL << 4) | (LM << 3) | (M << 2) | (RM << 1) | SR;
+        last_seen = 0;
+        for (i = 0; i < GS_CHANNELS; i++) {
+            if (gs_raw[i] < GS_THRESHOLD) last_seen |= (1 << i);
+        }
 
-        /* 加权偏差: SL=-2, LM=-1, M=0, RM=+1, SR=+2 */
-        int8_t error = -2 * SL - 1 * LM + 0 * M + 1 * RM + 2 * SR;
-
-        pwm_l = SPD_BASE + error * SPD_STRONG;
-        pwm_r = SPD_BASE - error * SPD_STRONG;
+        pwm_l = SPD_BASE + (int16_t)(error * SPD_STRONG);
+        pwm_r = SPD_BASE - (int16_t)(error * SPD_STRONG);
 
         Motor_SetSpeed(-pwm_l, -pwm_r);
 
     } else {
-        /* 脱线：MPU6050 辅助恢复 */
+        /* Lost line: gyro-assisted recovery */
         if (!lost_flag) {
-            uint8_t last_SL = (last_seen >> 4) & 1;
-            uint8_t last_LM = (last_seen >> 3) & 1;
-            uint8_t last_RM = (last_seen >> 1) & 1;
-            uint8_t last_SR = last_seen & 1;
-
             lost_flag = 1;
             lost_yaw = yaw_angle;
 
-            if (last_SL || last_LM) {
+            /* Determine recovery direction from last seen sensors */
+            if (last_seen & 0xC0) {        /* CH7, CH8 (left) */
                 target_offset = LOST_ANGLE;
-            } else if (last_SR || last_RM) {
+            } else if (last_seen & 0x03) { /* CH1, CH2 (right) */
                 target_offset = -LOST_ANGLE;
             } else {
                 target_offset = 0.0f;
@@ -159,12 +192,84 @@ void Tracking_Run(uint32_t dt_us)
     }
 }
 
-/* ---- 状态查询 ---- */
-float   Tracking_GetYaw(void)       { return yaw_angle; }
-uint8_t Tracking_GetGS(void)        { return gs_val; }
-uint8_t Tracking_GetLost(void)      { return lost_flag; }
+/* ---- Gyro straight ---- */
+void Tracking_GyroStraight_Start(float target_angle, int16_t speed)
+{
+    gyro_straight_target  = target_angle;
+    gyro_straight_speed   = speed;
+    gyro_straight_running = 1;
+    gyro_straight_output  = 0;
+    yaw_angle = 0.0f;
+    Debug_Printf("GyroStraight START: target=%d speed=%d\r\n",
+                 (int)target_angle, speed);
+}
 
-/* ---- 参数读写 ---- */
+void Tracking_GyroStraight_Stop(void)
+{
+    gyro_straight_running = 0;
+    gyro_straight_output  = 0;
+    Motor_Stop();
+}
+
+void Tracking_GyroStraight_Run(uint32_t dt_us)
+{
+    float err;
+    int16_t pwm_corr;
+    int16_t pwm_l, pwm_r;
+    static uint32_t dbg_tick = 0;
+
+    if (!gyro_straight_running) {
+        Motor_Stop();
+        return;
+    }
+
+    err = gyro_straight_target - yaw_angle;
+    pwm_corr = (int16_t)(GYRO_STRAIGHT_KP * err);
+
+    if (pwm_corr >  200) pwm_corr =  200;
+    if (pwm_corr < -200) pwm_corr = -200;
+
+    pwm_l = gyro_straight_speed + pwm_corr;
+    pwm_r = gyro_straight_speed - pwm_corr;
+
+    if (pwm_l < 0) pwm_l = 0;
+    if (pwm_r < 0) pwm_r = 0;
+    if (pwm_l > PWM_MAX) pwm_l = PWM_MAX;
+    if (pwm_r > PWM_MAX) pwm_r = PWM_MAX;
+
+    gyro_straight_output = pwm_corr;
+
+    dbg_tick += dt_us;
+    if (dbg_tick >= 500000) {
+        dbg_tick = 0;
+        Debug_Printf("GS: yaw=%d err=%d corr=%d\r\n",
+                     (int)(yaw_angle * 10), (int)(err * 10), pwm_corr);
+    }
+
+    Motor_SetSpeed(-pwm_l, -pwm_r);
+}
+
+uint8_t Tracking_GyroStraight_IsRunning(void)
+{
+    return gyro_straight_running;
+}
+
+int16_t Tracking_GyroStraight_GetOutput(void)
+{
+    return gyro_straight_output;
+}
+
+/* ---- Status queries ---- */
+float   Tracking_GetYaw(void)       { return yaw_angle; }
+uint8_t Tracking_GetGS(void)        { return 0; }  /* deprecated, use raw */
+uint8_t Tracking_GetLost(void)      { return lost_flag; }
+const uint16_t *Tracking_GetGSRaw(void)
+{
+    Grayscale_ReadAll(gs_raw);
+    return gs_raw;
+}
+
+/* ---- Parameter access ---- */
 void    Tracking_SetBaseSpeed(int16_t v)    { SPD_BASE = v; }
 void    Tracking_SetSlightSpeed(int16_t v)  { SPD_SLIGHT = v; }
 void    Tracking_SetStrongSpeed(int16_t v)  { SPD_STRONG = v; }
