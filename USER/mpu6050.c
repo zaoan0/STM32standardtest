@@ -1,7 +1,7 @@
 #include "mpu6050.h"
 #include "delay.h"
 
-/* ---------- Pin definitions (PB1-SCL, PB2-SDA, no JTAG conflict) ---------- */
+/* ---------- 引脚定义（PB1-SCL, PB2-SDA，无JTAG冲突） ---------- */
 #define SCL_H   GPIO_SetBits(GPIOB, GPIO_Pin_1)
 #define SCL_L   GPIO_ResetBits(GPIOB, GPIO_Pin_1)
 #define SDA_H   GPIO_SetBits(GPIOB, GPIO_Pin_2)
@@ -10,7 +10,7 @@
 
 #define MPU6050_ADDR  0xD0  // 0x68 << 1
 
-/* ---------- SDA direction switch ---------- */
+/* ---------- SDA方向切换 ---------- */
 static GPIO_InitTypeDef sda_gpio;
 
 static void SDA_OUT(void)
@@ -29,7 +29,7 @@ static void SDA_IN(void)
     GPIO_Init(GPIOB, &sda_gpio);
 }
 
-/* ---------- I2C bit-level primitives ---------- */
+/* ---------- I2C位级原语 ---------- */
 static void I2C_Start(void)
 {
     SDA_OUT();
@@ -59,7 +59,7 @@ static uint8_t I2C_WriteByte(uint8_t data)
     SDA_IN();
     delay_us(1);
     SCL_H; delay_us(3);
-    ack = (SDA_RD == 0) ? 1 : 0;  // SDA low = ACK
+    ack = (SDA_RD == 0) ? 1 : 0;  // SDA低 = ACK
     SCL_L; delay_us(2);
     return ack;
 }
@@ -76,18 +76,18 @@ static uint8_t I2C_ReadByte(uint8_t ack)
         SCL_L; delay_us(2);
     }
     SDA_OUT();
-    if (ack) SDA_L; else SDA_H;  // ACK: pull low, NACK: keep high
+    if (ack) SDA_L; else SDA_H;  // ACK：拉低，NACK：保持高
     delay_us(1);
     SCL_H; delay_us(3);
     SCL_L; delay_us(2);
     return data;
 }
 
-/* ---------- Register access layer ---------- */
+/* ---------- Register 访问层 ---------- */
 static void I2C_WriteReg(uint8_t reg, uint8_t val)
 {
     I2C_Start();
-    I2C_WriteByte(MPU6050_ADDR);     // write
+    I2C_WriteByte(MPU6050_ADDR);     // 写
     I2C_WriteByte(reg);
     I2C_WriteByte(val);
     I2C_Stop();
@@ -97,12 +97,12 @@ static uint8_t I2C_ReadReg(uint8_t reg)
 {
     uint8_t val;
     I2C_Start();
-    I2C_WriteByte(MPU6050_ADDR);     // write
+    I2C_WriteByte(MPU6050_ADDR);     // 写
     I2C_WriteByte(reg);
     I2C_Stop();
 
     I2C_Start();
-    I2C_WriteByte(MPU6050_ADDR | 1); // read
+    I2C_WriteByte(MPU6050_ADDR | 1); // 读
     val = I2C_ReadByte(0);           // NACK
     I2C_Stop();
     return val;
@@ -119,12 +119,12 @@ static void I2C_ReadBytes(uint8_t reg, uint8_t *buf, uint8_t len)
     I2C_Start();
     I2C_WriteByte(MPU6050_ADDR | 1);
     for (i = 0; i < len; i++) {
-        buf[i] = I2C_ReadByte(i < (len - 1) ? 1 : 0);  // ACK all except last
+        buf[i] = I2C_ReadByte(i < (len - 1) ? 1 : 0);  // 除最后一个外都发ACK
     }
     I2C_Stop();
 }
 
-/* ---------- Bus recovery (toggle SCL 9 times) ---------- */
+/* ---------- Bus 恢复（SCL翻转9次） ---------- */
 static void I2C_Recovery(void)
 {
     uint8_t i;
@@ -136,7 +136,7 @@ static void I2C_Recovery(void)
     I2C_Stop();
 }
 
-/* ========== Public API ========== */
+/* ========== 公共接口 ========== */
 
 void MPU6050_Init(void)
 {
@@ -144,34 +144,34 @@ void MPU6050_Init(void)
 
     RCC_APB2PeriphClockCmd(RCC_APB2Periph_GPIOB, ENABLE);
 
-    // SCL: open-drain output (PB1)
+    // SCL：Open-drain output（PB1）
     gpio.GPIO_Pin   = GPIO_Pin_1;
     gpio.GPIO_Mode  = GPIO_Mode_Out_OD;
     gpio.GPIO_Speed = GPIO_Speed_2MHz;
     GPIO_Init(GPIOB, &gpio);
 
-    // SDA: open-drain output (PB2)
+    // SDA：Open-drain output（PB2）
     gpio.GPIO_Pin   = GPIO_Pin_2;
     GPIO_Init(GPIOB, &gpio);
 
     SCL_H; SDA_H;
 
-    // Bus recovery in case of previous lockup
+    // Bus 恢复，防止之前锁定
     I2C_Recovery();
 
-    // MPU6050 power-on delay (100ms)
+    // MPU6050上电延时（100ms）
     delay_us(100000);
 
-    // Wake up (clear sleep bit)
+    // 唤醒（清除睡眠位）
     I2C_WriteReg(0x6B, 0x00);
 
-    // Gyro: +/-500 dps (FS_SEL=1)
+    // Gyro：±500 dps（FS_SEL=1）
     I2C_WriteReg(0x1B, 0x08);
 
-    // Accel: +/-4g (AFS_SEL=2)
+    // Accelerometer：±4g（AFS_SEL=2）
     I2C_WriteReg(0x1C, 0x10);
 
-    // DLPF: 44Hz bandwidth (filters motor vibration)
+    // DLPF：44Hz带宽（滤除电机振动）
     I2C_WriteReg(0x1A, 0x03);
 }
 
@@ -183,6 +183,6 @@ uint8_t MPU6050_Check(void)
 int16_t MPU6050_ReadGyroZ(void)
 {
     uint8_t buf[2];
-    I2C_ReadBytes(0x47, buf, 2);  // GYRO_ZOUT_H, GYRO_ZOUT_L
+    I2C_ReadBytes(0x47, buf, 2);  // Gyro Z轴高/低字节
     return (int16_t)((buf[0] << 8) | buf[1]);
 }

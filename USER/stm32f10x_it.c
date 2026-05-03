@@ -21,132 +21,131 @@
   ******************************************************************************
   */
 
-/* Includes ------------------------------------------------------------------*/
+/* 包含 ------------------------------------------------------------------*/
 #include "stm32f10x_it.h"
 
 /** @addtogroup STM32F10x_StdPeriph_Template
   * @{
   */
 
-/* Private typedef -----------------------------------------------------------*/
-/* Private define ------------------------------------------------------------*/
-/* Private macro -------------------------------------------------------------*/
-/* Private variables ---------------------------------------------------------*/
-/* Private function prototypes -----------------------------------------------*/
-/* Private functions ---------------------------------------------------------*/
+/* 私有类型 -----------------------------------------------------------*/
+/* 私有定义 ------------------------------------------------------------*/
+/* 私有宏 -------------------------------------------------------------*/
+/* 私有变量 ---------------------------------------------------------*/
+/* 私有函数原型 -----------------------------------------------*/
+/* 私有函数 ---------------------------------------------------------*/
 
 /******************************************************************************/
-/*            Cortex-M3 Processor Exceptions Handlers                         */
+/*            Cortex-M3 处理器异常处理函数                         */
 /******************************************************************************/
 
 /**
-  * @brief  This function handles NMI exception.
-  * @param  None
-  * @retval None
+  * @brief  处理NMI异常。
+  * @param  无
+  * @retval 无
   */
 void NMI_Handler(void)
 {
 }
 
 /**
-  * @brief  This function handles Hard Fault exception.
-  * @param  None
-  * @retval None
+  * @brief  处理硬件错误异常。
+  * @param  无
+  * @retval 无
   */
 void HardFault_Handler(void)
 {
-  /* Go to infinite loop when Hard Fault exception occurs */
+  /* 硬件错误发生时进入死循环 */
   while (1)
   {
   }
 }
 
 /**
-  * @brief  This function handles Memory Manage exception.
-  * @param  None
-  * @retval None
+  * @brief  处理内存管理异常。
+  * @param  无
+  * @retval 无
   */
 void MemManage_Handler(void)
 {
-  /* Go to infinite loop when Memory Manage exception occurs */
+  /* 内存管理异常发生时进入死循环 */
   while (1)
   {
   }
 }
 
 /**
-  * @brief  This function handles Bus Fault exception.
-  * @param  None
-  * @retval None
+  * @brief  处理总线错误异常。
+  * @param  无
+  * @retval 无
   */
 void BusFault_Handler(void)
 {
-  /* Go to infinite loop when Bus Fault exception occurs */
+  /* 总线错误发生时进入死循环 */
   while (1)
   {
   }
 }
 
 /**
-  * @brief  This function handles Usage Fault exception.
-  * @param  None
-  * @retval None
+  * @brief  处理用法错误异常。
+  * @param  无
+  * @retval 无
   */
 void UsageFault_Handler(void)
 {
-  /* Go to infinite loop when Usage Fault exception occurs */
+  /* 用法错误发生时进入死循环 */
   while (1)
   {
   }
 }
 
 /**
-  * @brief  This function handles SVCall exception.
-  * @param  None
-  * @retval None
+  * @brief  处理SVCall异常。
+  * @param  无
+  * @retval 无
   */
 void SVC_Handler(void)
 {
 }
 
 /**
-  * @brief  This function handles Debug Monitor exception.
-  * @param  None
-  * @retval None
+  * @brief  处理调试监视器异常。
+  * @param  无
+  * @retval 无
   */
 void DebugMon_Handler(void)
 {
 }
 
 /**
-  * @brief  This function handles PendSVC exception.
-  * @param  None
-  * @retval None
+  * @brief  处理PendSVC异常。
+  * @param  无
+  * @retval 无
   */
 void PendSV_Handler(void)
 {
 }
 
 /**
-  * @brief  This function handles SysTick Handler.
-  * @param  None
-  * @retval None
+  * @brief  处理SysTick中断。
+  * @param  无
+  * @retval 无
   */
 void SysTick_Handler(void)
 {
 }
 
 /******************************************************************************/
-/*                 STM32F10x Peripherals Interrupt Handlers                   */
-/*  Add here the Interrupt Handler for the used peripheral(s) (PPP), for the  */
-/*  available peripheral interrupt handler's name please refer to the startup */
-/*  file (startup_stm32f10x_xx.s).                                            */
+/*                 STM32F10x 外设中断处理函数                   */
+/*  在此添加使用的外设中断处理函数（PPP），可用的外设中断处理函数名称请参阅启动 */
+/*  文件（startup_stm32f10x_xx.s）。                                            */
 /******************************************************************************/
 
 /**
-  * @brief  This function handles PPP interrupt request.
-  * @param  None
-  * @retval None
+  * @brief  处理PPP中断请求。
+  * @param  无
+  * @retval 无
   */
 /*void PPP_IRQHandler(void)
 {

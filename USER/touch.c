@@ -4,25 +4,25 @@
 #include <string.h>
 
 /*
- * GT9147/GT917S capacitive touch controller driver
+ * GT9147/GT917S 电容 Touch Controller 驱动
  * 正点原子战舰V3 4.3" TFT LCD v1.6
- * 引脚: PB1(SCL/TCLK), PF9(SDA/TDIN), PF10(PEN/INT), PF11(TCS/RST)
+ * 引脚：PB1(SCL/TCLK), PF9(SDA/TDIN), PF10(PEN/INT), PF11(TCS/RST)
  *
- * Based on official 正点原子 gt9147.c + ctiic.c
- * GT9147 I2C address: 0x28 (write), 0x29 (read) [7-bit: 0x14]
+ * 基于正点原子官方 gt9147.c + ctiic.c
+ * GT9147 I2C地址：0x28（写），0x29（读）[7位：0x14]
  */
 
-/* ---- I2C pin definitions ---- */
+/* ---- I2C Pin 定义 ---- */
 #define TOUCH_SCL_PORT   GPIOB
-#define TOUCH_SCL_PIN    GPIO_Pin_1    /* PB1: TCLK */
+#define TOUCH_SCL_PIN    GPIO_Pin_1    /* PB1：TCLK */
 #define TOUCH_SDA_PORT   GPIOF
-#define TOUCH_SDA_PIN    GPIO_Pin_9    /* PF9: TDIN */
+#define TOUCH_SDA_PIN    GPIO_Pin_9    /* PF9：TDIN */
 #define TOUCH_RST_PORT   GPIOF
-#define TOUCH_RST_PIN    GPIO_Pin_11   /* PF11: TCS/RST */
+#define TOUCH_RST_PIN    GPIO_Pin_11   /* PF11：TCS/RST */
 #define TOUCH_INT_PORT   GPIOF
-#define TOUCH_INT_PIN    GPIO_Pin_10   /* PF10: PEN/INT */
+#define TOUCH_INT_PIN    GPIO_Pin_10   /* PF10：PEN/INT */
 
-/* I2C bit-bang macros (direct register for speed) */
+/* I2C位操作宏（直接 Register 操作，提高速度） */
 #define SCL_H   GPIO_SetBits(TOUCH_SCL_PORT, TOUCH_SCL_PIN)
 #define SCL_L   GPIO_ResetBits(TOUCH_SCL_PORT, TOUCH_SCL_PIN)
 #define SDA_H   GPIO_SetBits(TOUCH_SDA_PORT, TOUCH_SDA_PIN)
@@ -32,7 +32,7 @@
 #define RST_H   GPIO_SetBits(TOUCH_RST_PORT, TOUCH_RST_PIN)
 #define RST_L   GPIO_ResetBits(TOUCH_RST_PORT, TOUCH_RST_PIN)
 
-/* GT9147 register addresses */
+/* GT9147 Register 地址 */
 #define GT_CMD_WR      0x28
 #define GT_CMD_RD      0x29
 #define GT_CTRL_REG    0x8040
@@ -48,7 +48,7 @@
 
 static const uint16_t GT_TP_REG[5] = {GT_TP1_REG, GT_TP2_REG, GT_TP3_REG, GT_TP4_REG, GT_TP5_REG};
 
-/* ---- Software I2C layer ---- */
+/* ---- 软件I2C层 ---- */
 
 static GPIO_InitTypeDef _sda_gpio;
 
@@ -162,7 +162,7 @@ static uint8_t I2C_ReadByte(uint8_t ack)
     return data;
 }
 
-/* ---- GT9147 register access ---- */
+/* ---- GT9147 Register 访问 ---- */
 
 static uint8_t GT9147_WR_Reg(uint16_t reg, uint8_t *buf, uint8_t len)
 {
@@ -202,7 +202,7 @@ static void GT9147_RD_Reg(uint16_t reg, uint8_t *buf, uint8_t len)
     I2C_Stop();
 }
 
-/* ---- GT9147 configuration ---- */
+/* ---- GT9147 Config ---- */
 
 static const uint8_t GT9147_CFG[] = {
     0x60, 0xE0, 0x01, 0x20, 0x03, 0x05, 0x35, 0x00, 0x02, 0x08,
@@ -242,7 +242,7 @@ static void GT9147_SendCfg(uint8_t mode)
     GT9147_WR_Reg(GT_CHECK_REG, buf, 2);
 }
 
-/* ---- Public API ---- */
+/* ---- 公共接口 ---- */
 
 void Touch_Init(void)
 {
@@ -251,40 +251,40 @@ void Touch_Init(void)
 
     RCC_APB2PeriphClockCmd(RCC_APB2Periph_GPIOB | RCC_APB2Periph_GPIOF, ENABLE);
 
-    /* SCL (PB1): push-pull output */
+    /* SCL（PB1）：Push-pull output */
     gpio.GPIO_Pin   = TOUCH_SCL_PIN;
     gpio.GPIO_Mode  = GPIO_Mode_Out_PP;
     gpio.GPIO_Speed = GPIO_Speed_50MHz;
     GPIO_Init(TOUCH_SCL_PORT, &gpio);
     GPIO_SetBits(TOUCH_SCL_PORT, TOUCH_SCL_PIN);
 
-    /* SDA (PF9): push-pull output */
+    /* SDA（PF9）：Push-pull output */
     gpio.GPIO_Pin   = TOUCH_SDA_PIN;
     gpio.GPIO_Mode  = GPIO_Mode_Out_PP;
     gpio.GPIO_Speed = GPIO_Speed_50MHz;
     GPIO_Init(TOUCH_SDA_PORT, &gpio);
     GPIO_SetBits(TOUCH_SDA_PORT, TOUCH_SDA_PIN);
 
-    /* RST (PF11): push-pull output */
+    /* RST（PF11）：Push-pull output */
     gpio.GPIO_Pin   = TOUCH_RST_PIN;
     gpio.GPIO_Mode  = GPIO_Mode_Out_PP;
     gpio.GPIO_Speed = GPIO_Speed_50MHz;
     GPIO_Init(TOUCH_RST_PORT, &gpio);
     GPIO_SetBits(TOUCH_RST_PORT, TOUCH_RST_PIN);
 
-    /* INT (PF11): input pull-up first, then pull-down after reset */
+    /* INT（PF10）：先 Pull-up input，Reset 后 Pull-down */
     gpio.GPIO_Pin   = TOUCH_INT_PIN;
     gpio.GPIO_Mode  = GPIO_Mode_IPU;
     GPIO_Init(TOUCH_INT_PORT, &gpio);
     GPIO_SetBits(TOUCH_INT_PORT, TOUCH_INT_PIN);
 
-    /* Reset sequence */
+    /* Reset 时序 */
     RST_L;
     delay_us(10000);   /* 10ms */
     RST_H;
     delay_us(10000);   /* 10ms */
 
-    /* INT pin to input pull-down (official sequence) */
+    /* INT Pin 设为 Pull-down input（官方时序） */
     gpio.GPIO_Pin   = TOUCH_INT_PIN;
     gpio.GPIO_Mode  = GPIO_Mode_IPD;
     GPIO_Init(TOUCH_INT_PORT, &gpio);
@@ -292,16 +292,16 @@ void Touch_Init(void)
 
     delay_us(100000);  /* 100ms */
 
-    /* Read product ID */
+    /* 读取产品ID */
     GT9147_RD_Reg(GT_PID_REG, id, 4);
     id[4] = 0;
     Debug_Printf("CTP ID:%s\r\n", id);
 
-    /* Software reset */
+    /* Software Reset */
     id[0] = 0x02;
     GT9147_WR_Reg(GT_CTRL_REG, id, 1);
 
-    /* Check config version, update if needed */
+    /* 检查配置版本，必要时更新 */
     GT9147_RD_Reg(GT_CFGS_REG, id, 1);
     if (id[0] < 0x60) {
         Debug_Printf("CFG ver:%d, updating\r\n", id[0]);
@@ -310,7 +310,7 @@ void Touch_Init(void)
 
     delay_us(10000);
     id[0] = 0x00;
-    GT9147_WR_Reg(GT_CTRL_REG, id, 1);  /* End reset */
+    GT9147_WR_Reg(GT_CTRL_REG, id, 1);  /* 结束复位 */
 }
 
 uint8_t Touch_Scan(Touch_Data_t *data)
@@ -324,7 +324,7 @@ uint8_t Touch_Scan(Touch_Data_t *data)
     GT9147_RD_Reg(GT_GSTID_REG, &status, 1);
 
     if ((status & 0x80) && ((status & 0x0F) < 6)) {
-        /* Clear status register */
+        /* 清除 Status Register */
         uint8_t zero = 0;
         GT9147_WR_Reg(GT_GSTID_REG, &zero, 1);
     }
@@ -334,14 +334,14 @@ uint8_t Touch_Scan(Touch_Data_t *data)
         for (i = 0; i < num && i < 5; i++) {
             GT9147_RD_Reg(GT_TP_REG[i], buf, 4);
 
-            /* Landscape transform (matches official gt9147.c touchtype=1) */
+            /* 横屏坐标变换（匹配官方 gt9147.c touchtype=1） */
             data->y[i] = ((uint16_t)buf[1] << 8) | buf[0];
             data->x[i] = 800 - (((uint16_t)buf[3] << 8) | buf[2]);
         }
         data->num = num;
         res = 1;
 
-        /* Validate primary touch point */
+        /* 验证主触摸点 */
         if (data->x[0] > 800 || data->y[0] > 480) {
             if (num > 1) {
                 data->x[0] = data->x[1];

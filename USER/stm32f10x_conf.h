@@ -19,12 +19,12 @@
   ******************************************************************************
   */
 
-/* Define to prevent recursive inclusion -------------------------------------*/
+/* 防止递归包含 -------------------------------------*/
 #ifndef __STM32F10x_CONF_H
 #define __STM32F10x_CONF_H
 
-/* Includes ------------------------------------------------------------------*/
-/* Uncomment/Comment the line below to enable/disable peripheral header file inclusion */
+/* 包含 ------------------------------------------------------------------*/
+/* 取消注释/注释下行以启用/禁用外设头文件包含 */
 #include "stm32f10x_adc.h"
 #include "stm32f10x_bkp.h"
 #include "stm32f10x_can.h"
@@ -47,26 +47,24 @@
 #include "stm32f10x_tim.h"
 #include "stm32f10x_usart.h"
 #include "stm32f10x_wwdg.h"
-#include "misc.h" /* High level functions for NVIC and SysTick (add-on to CMSIS functions) */
+#include "misc.h" /* NVIC和SysTick高级函数（CMSIS函数扩展） */
 
-/* Exported types ------------------------------------------------------------*/
-/* Exported constants --------------------------------------------------------*/
-/* Uncomment the line below to expanse the "assert_param" macro in the 
-   Standard Peripheral Library drivers code */
+/* 导出类型 ------------------------------------------------------------*/
+/* 导出常量 --------------------------------------------------------*/
+/* 取消注释下行以在标准外设库驱动代码中展开"assert_param"宏 */
 /* #define USE_FULL_ASSERT    1 */
 
-/* Exported macro ------------------------------------------------------------*/
+/* 导出宏 ------------------------------------------------------------*/
 #ifdef  USE_FULL_ASSERT
 
 /**
-  * @brief  The assert_param macro is used for function's parameters check.
-  * @param  expr: If expr is false, it calls assert_failed function which reports 
-  *         the name of the source file and the source line number of the call 
-  *         that failed. If expr is true, it returns no value.
-  * @retval None
+  * @brief  assert_param宏用于函数参数检查。
+  * @param  expr：如果expr为假，调用assert_failed函数报告失败调用的
+  *         源文件名和行号。如果expr为真，不返回值。
+  * @retval 无
   */
   #define assert_param(expr) ((expr) ? (void)0 : assert_failed((uint8_t *)__FILE__, __LINE__))
-/* Exported functions ------------------------------------------------------- */
+/* 导出函数 ------------------------------------------------------- */
   void assert_failed(uint8_t* file, uint32_t line);
 #else
   #define assert_param(expr) ((void)0)

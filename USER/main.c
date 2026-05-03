@@ -8,8 +8,8 @@
 #include "grayscale.h"
 
 /*
- * v2.0: 战舰V3 ZET6 + 4.3" TFT LCD 触摸屏循迹小车
- * 多页面 UI：主页导航 → 循迹 / 陀螺仪直线 / 空白页
+ * v2.0：战舰V3 ZET6 + 4.3" TFT LCD Touchscreen 循迹小车
+ * 多页面UI：主页导航 → 循迹 / Gyro 直线 / 空白页
  */
 
 #define LOOP_MS  10
@@ -19,28 +19,28 @@ int main(void)
     uint32_t tick_now, tick_prev, dt_us;
     static uint32_t disp_tick = 0;
 
-    /* 初始化基础模块 */
+    /* 初始化基础外设 */
     DWT_Init();
     Debug_Init();
     Debug_Printf("=== BOOT ===\r\n");
 
-    /* 初始化硬件驱动 */
+    /* 初始化硬件模块 */
     Tracking_Init();
 
-    /* 初始化 LCD */
+    /* 初始化LCD */
     LCD_Init();
     Debug_Printf("LCD OK\r\n");
 
-    /* 初始化触摸屏 */
+    /* 初始化 Touchscreen */
     Touch_Init();
     Debug_Printf("Touch OK\r\n");
 
     Debug_Printf("=== ALL INIT DONE ===\r\n");
 
-    /* ADC self-test: read PA4 raw */
+    /* ADC自检：读取PA4原始值 */
     {
         uint16_t test_adc;
-        /* Select channel 0 on mux (AD0=0, AD1=0, AD2=0) */
+        /* 选择 Multiplexer 通道0 (AD0=0, AD1=0, AD2=0) */
         GPIO_ResetBits(GPIOC, GPIO_Pin_4);  /* AD0 */
         GPIO_ResetBits(GPIOC, GPIO_Pin_5);  /* AD1 */
         GPIO_ResetBits(GPIOC, GPIO_Pin_1);  /* AD2 */
@@ -51,7 +51,7 @@ int main(void)
         test_adc = ADC_GetConversionValue(ADC1);
         Debug_Printf("ADC test CH0 = %d\r\n", test_adc);
 
-        /* Select channel 7 on mux (AD0=1, AD1=1, AD2=1) */
+        /* 选择 Multiplexer 通道7 (AD0=1, AD1=1, AD2=1) */
         GPIO_SetBits(GPIOC, GPIO_Pin_4);  /* AD0 */
         GPIO_SetBits(GPIOC, GPIO_Pin_5);  /* AD1 */
         GPIO_SetBits(GPIOC, GPIO_Pin_1);  /* AD2 */
@@ -63,11 +63,11 @@ int main(void)
         Debug_Printf("ADC test CH7 = %d\r\n", test_adc);
     }
 
-    /* 陀螺仪校准 */
+    /* Gyro 校准 */
     Tracking_Gyro_Calibrate();
     Debug_Printf("System ready. 72MHz, LCD 800x480\r\n");
 
-    /* 绘制 UI（校准后，避免被校准文字覆盖） */
+    /* 绘制UI（校准后，避免被校准文字覆盖） */
     UI_Init();
 
     tick_prev = DWT_CYCCNT;
@@ -78,7 +78,7 @@ int main(void)
         dt_us = (tick_now - tick_prev) / (SystemCoreClock / 1000000);
         tick_prev = tick_now;
 
-        /* 陀螺仪积分（始终运行） */
+        /* Gyro 积分（始终运行） */
         Tracking_UpdateGyro(dt_us);
 
         /* 触摸处理 */
@@ -96,14 +96,14 @@ int main(void)
                 break;
         }
 
-        /* 状态显示 (每 200ms) */
+        /* 状态显示（每200ms） */
         disp_tick += dt_us;
         if (disp_tick >= 200000) {
             disp_tick = 0;
             UI_UpdateStatus();
         }
 
-        /* Debug: print ADC values every 500ms (direct read, any page) */
+        /* 调试：每500ms打印ADC值（直接读取，任何页面） */
         {
             static uint32_t dbg_tick = 0;
             static uint8_t dbg_first = 1;

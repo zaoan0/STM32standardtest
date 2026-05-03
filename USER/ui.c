@@ -36,12 +36,12 @@ static Rect back_btn;
 #define TRACK_BTN_W      200
 #define TRACK_BTN_GAP    40
 #define TRACK_PARAM_Y    180
-#define TRACK_PARAM_ROW  75
+#define TRACK_PARAM_ROW  60
 #define TRACK_PARAM_BTN  50
 #define TRACK_PARAM_BH   36
 #define TRACK_PARAM_VW   70
 #define TRACK_PARAM_LX   180
-#define TRACK_STATUS_Y   380
+#define TRACK_STATUS_Y   395
 #define TRACK_PARAM_NUM  3
 
 static Rect track_mode_btns[2];
@@ -49,6 +49,14 @@ static Rect track_minus[TRACK_PARAM_NUM];
 static Rect track_plus[TRACK_PARAM_NUM];
 static const char *track_mode_names[] = { "停止", "循迹" };
 static const char *track_param_names[] = { "Base", "Slight", "Strong" };
+static Rect track_preset_btns[3];
+static const char *track_preset_names[] = { "快", "中", "慢" };
+/* 快: 350/30/60, 中: 250/30/70, 慢: 180/10/50 */
+static const int16_t track_preset_vals[3][3] = {
+    {350, 30, 60},
+    {250, 30, 70},
+    {180, 10, 50}
+};
 
 #define GYRO_ROW1_Y   80
 #define GYRO_ROW2_Y   150
@@ -155,6 +163,23 @@ static void DrawTrackPage(void)
         LCD_DrawButtonCN(track_plus[i].x, track_plus[i].y,
                          track_plus[i].w, track_plus[i].h, "+", BTN_TEXT, DARKGRAY);
     }
+    /* 快速慢时版 */
+    {
+        uint16_t preset_w = 150, preset_h = 35;
+        uint16_t preset_gap = 20;
+        uint16_t total_preset_w = 3 * preset_w + 2 * preset_gap;
+        uint16_t preset_sx = (800 - total_preset_w) / 2;
+        uint16_t preset_y = 345;
+        for (i = 0; i < 3; i++) {
+            track_preset_btns[i].x = preset_sx + i * (preset_w + preset_gap);
+            track_preset_btns[i].y = preset_y;
+            track_preset_btns[i].w = preset_w;
+            track_preset_btns[i].h = preset_h;
+            LCD_DrawButtonCN(track_preset_btns[i].x, track_preset_btns[i].y,
+                             track_preset_btns[i].w, track_preset_btns[i].h,
+                             track_preset_names[i], BTN_TEXT, DARKGRAY);
+        }
+    }
     LCD_ShowMixedString(30, TRACK_STATUS_Y, "状态:", STATUS_COLOR, BG_COLOR);
 }
 
@@ -201,6 +226,29 @@ static void HandleTrackTouch(uint16_t tx, uint16_t ty)
                             track_minus[i].y + 10, getters[i](), 4, WHITE, BG_COLOR, 16);
                 return;
             }
+        }
+    }
+    /* 快速慢时版 */
+    for (i = 0; i < 3; i++) {
+        if (PtInRect(tx, ty, &track_preset_btns[i])) {
+            Tracking_SetBaseSpeed(track_preset_vals[i][0]);
+            Tracking_SetSlightSpeed(track_preset_vals[i][1]);
+            Tracking_SetStrongSpeed(track_preset_vals[i][2]);
+            {
+                uint8_t j;
+                int16_t vals[3];
+                vals[0] = Tracking_GetBaseSpeed();
+                vals[1] = Tracking_GetSlightSpeed();
+                vals[2] = Tracking_GetStrongSpeed();
+                for (j = 0; j < TRACK_PARAM_NUM; j++) {
+                    LCD_FillRect(track_minus[j].x + track_minus[j].w + 10,
+                                 track_minus[j].y + 10, TRACK_PARAM_VW, 16, BG_COLOR);
+                    LCD_ShowNum(track_minus[j].x + track_minus[j].w + 10,
+                                track_minus[j].y + 10, vals[j], 4, WHITE, BG_COLOR, 16);
+                }
+            }
+            Debug_Printf("Preset %d: %d/%d/%d\r\n", i, track_preset_vals[i][0], track_preset_vals[i][1], track_preset_vals[i][2]);
+            return;
         }
     }
 }
@@ -337,6 +385,11 @@ static void UpdateGyroStatus(void)
     LCD_ShowString(130, GYRO_STATUS_Y + 50, "deg", LIGHTGRAY, BG_COLOR, 16);
     LCD_ShowMixedString(220, GYRO_STATUS_Y + 50, "Speed:", LIGHTGRAY, BG_COLOR);
     LCD_ShowNum(310, GYRO_STATUS_Y + 50, gyro_speed, 4, WHITE, BG_COLOR, 16);
+    /* 启动/停止按牛生斯 */
+    LCD_DrawButtonCN(gyro_start_btn.x, gyro_start_btn.y, gyro_start_btn.w, gyro_start_btn.h,
+                     "运行中", BTN_TEXT, running ? DARKGRAY : GREEN);
+    LCD_DrawButtonCN(gyro_stop_btn.x, gyro_stop_btn.y, gyro_stop_btn.w, gyro_stop_btn.h,
+                     "停止", BTN_TEXT, running ? RED : DARKGRAY);
 }
 
 static void DrawBlankPage(uint8_t idx)

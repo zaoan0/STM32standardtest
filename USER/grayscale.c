@@ -1,10 +1,10 @@
 #include "grayscale.h"
 #include "delay.h"
 
-/* 8-channel analog grayscale sensor (感为 GW-8ARS)
- * AD0=PC4, AD1=PC5, AD2=PC1 (address select, push-pull output)
- * OUT=PA4 (ADC1_CH4, analog input)
- * EN=NC (internal pull-down, default enabled)
+/* 8路模拟 Grayscale Sensor（感为 GW-8ARS）
+ * AD0=PC4, AD1=PC5, AD2=PC1（地址选择，Push-pull output）
+ * OUT=PA4（ADC1_CH4，Analog input）
+ * EN=NC（内部 Pull-down，默认 Enable）
  */
 
 #define AD0_H  GPIO_SetBits(GPIOC, GPIO_Pin_4)
@@ -29,20 +29,20 @@ void Grayscale_Init(void)
 
     RCC_APB2PeriphClockCmd(RCC_APB2Periph_GPIOA | RCC_APB2Periph_GPIOC |
                            RCC_APB2Periph_ADC1, ENABLE);
-    RCC_ADCCLKConfig(RCC_PCLK2_Div6);  /* ADC clock = 12MHz */
+    RCC_ADCCLKConfig(RCC_PCLK2_Div6);  /* ADC时钟 = 12MHz */
 
-    /* PC1, PC4, PC5: push-pull output (address select) */
+    /* PC1, PC4, PC5：Push-pull output（地址选择） */
     gpio.GPIO_Pin   = GPIO_Pin_1 | GPIO_Pin_4 | GPIO_Pin_5;
     gpio.GPIO_Mode  = GPIO_Mode_Out_PP;
     gpio.GPIO_Speed = GPIO_Speed_2MHz;
     GPIO_Init(GPIOC, &gpio);
 
-    /* PA4: analog input (ADC) */
+    /* PA4：Analog input（ADC） */
     gpio.GPIO_Pin   = GPIO_Pin_4;
     gpio.GPIO_Mode  = GPIO_Mode_AIN;
     GPIO_Init(GPIOA, &gpio);
 
-    /* ADC1 config */
+    /* ADC1配置 */
     adc.ADC_Mode               = ADC_Mode_Independent;
     adc.ADC_ScanConvMode       = DISABLE;
     adc.ADC_ContinuousConvMode = DISABLE;
@@ -53,7 +53,7 @@ void Grayscale_Init(void)
 
     ADC_Cmd(ADC1, ENABLE);
 
-    /* ADC calibration */
+    /* ADC校准 */
     ADC_ResetCalibration(ADC1);
     while (ADC_GetResetCalibrationStatus(ADC1));
     ADC_StartCalibration(ADC1);

@@ -6,7 +6,7 @@
 #include "delay.h"
 #include "debug.h"
 
-/* ---- Gyro parameters ---- */
+/* ---- Gyro 参数 ---- */
 #define GYRO_SCALE     0.01527f
 #define INTEG_THRESH   1.0f
 #define LOST_ANGLE     30.0f
@@ -14,24 +14,24 @@
 #define LOST_PWM_MIN   80
 #define LOST_PWM_MAX   250
 
-/* ---- 8-channel sensor threshold (adjust after testing) ---- */
+/* ---- 8路 Sensor 阈值（调试后调整） ---- */
 #define GS_THRESHOLD   2000
 
-/* ---- Internal state ---- */
+/* ---- 内部状态 ---- */
 uint8_t current_mode = MODE_STOP;
 
 static float    gyro_bias;
 static float    yaw_angle = 0.0f;
 static int16_t  SPD_BASE   = 200;
-static int16_t  SPD_SLIGHT = 75;
-static int16_t  SPD_STRONG = 150;
-static uint16_t gs_raw[GS_CHANNELS];   /* raw ADC values (0-4095) */
+static int16_t  SPD_SLIGHT = 50;
+static int16_t  SPD_STRONG = 100;
+static uint16_t gs_raw[GS_CHANNELS];   /* 原始ADC值（0-4095） */
 static uint8_t  lost_flag = 0;
 static uint8_t  last_seen = 0;
 static float    lost_yaw = 0.0f;
 static float    target_offset = 0.0f;
 
-/* ---- Gyro straight state ---- */
+/* ---- Gyro 直线状态 ---- */
 #define GYRO_STRAIGHT_KP  5.0f
 
 static uint8_t  gyro_straight_running = 0;
@@ -39,7 +39,7 @@ static float    gyro_straight_target  = 0.0f;
 static int16_t  gyro_straight_speed   = 200;
 static int16_t  gyro_straight_output  = 0;
 
-/* ---- Utility ---- */
+/* ---- 工具函数 ---- */
 static int16_t clamp_pwm(int16_t v)
 {
     if (v >  LOST_PWM_MAX) return  LOST_PWM_MAX;
@@ -49,7 +49,7 @@ static int16_t clamp_pwm(int16_t v)
     return v;
 }
 
-/* ========== Public API ========== */
+/* ========== 公共接口 ========== */
 
 void Tracking_Init(void)
 {
@@ -110,13 +110,13 @@ void Tracking_Run(uint32_t dt_us)
         return;
     }
 
-    /* Read all 8 channels */
+    /* 读取全部8路通道 */
     Grayscale_ReadAll(gs_raw);
 
-    /* Weighted average: CH1=-3.5 ... CH8=+3.5
-     * Weights: -7, -5, -3, -1, +1, +3, +5, +7 (x2 to avoid float)
-     * Use analog: on_track = (GS_THRESHOLD - raw) / GS_THRESHOLD (0~1)
-     * Black line = low ADC value
+    /* 加权平均：CH1=-3.5 ... CH8=+3.5
+     * 权重：-7, -5, -3, -1, +1, +3, +5, +7（x2避免浮点）
+     * 模拟量：on_track = (GS_THRESHOLD - raw) / GS_THRESHOLD (0~1)
+     * 黑线 = 低ADC值
      */
     {
         int32_t weighted_sum = 0;
@@ -125,7 +125,7 @@ void Tracking_Run(uint32_t dt_us)
 
         for (i = 0; i < GS_CHANNELS; i++) {
             if (gs_raw[i] < GS_THRESHOLD) {
-                /* On the line: strength = how dark (0=white, GS_THRESHOLD=black) */
+                /* 在线上：强度 = 深度 (0=白, GS_THRESHOLD=黑) */
                 int32_t strength = GS_THRESHOLD - gs_raw[i];
                 weighted_sum += weights[i] * strength;
                 weight_norm += strength;
@@ -141,7 +141,7 @@ void Tracking_Run(uint32_t dt_us)
     }
 
     if (any_on) {
-        /* Line detected: weighted tracking */
+        /* 检测到线：加权循迹 */
         lost_flag = 0;
         last_seen = 0;
         for (i = 0; i < GS_CHANNELS; i++) {
@@ -154,15 +154,15 @@ void Tracking_Run(uint32_t dt_us)
         Motor_SetSpeed(-pwm_l, -pwm_r);
 
     } else {
-        /* Lost line: gyro-assisted recovery */
+        /* 脱线：Gyro 辅助恢复 */
         if (!lost_flag) {
             lost_flag = 1;
             lost_yaw = yaw_angle;
 
-            /* Determine recovery direction from last seen sensors */
-            if (last_seen & 0xC0) {        /* CH7, CH8 (left) */
+            /* 根据最后看到的 Sensor 确定恢复方向 */
+            if (last_seen & 0xC0) {        /* CH7, CH8 (左侧) */
                 target_offset = LOST_ANGLE;
-            } else if (last_seen & 0x03) { /* CH1, CH2 (right) */
+            } else if (last_seen & 0x03) { /* CH1, CH2 (右侧) */
                 target_offset = -LOST_ANGLE;
             } else {
                 target_offset = 0.0f;
@@ -192,7 +192,7 @@ void Tracking_Run(uint32_t dt_us)
     }
 }
 
-/* ---- Gyro straight ---- */
+/* ---- Gyro 直线 ---- */
 void Tracking_GyroStraight_Start(float target_angle, int16_t speed)
 {
     gyro_straight_target  = target_angle;
@@ -259,9 +259,9 @@ int16_t Tracking_GyroStraight_GetOutput(void)
     return gyro_straight_output;
 }
 
-/* ---- Status queries ---- */
+/* ---- 状态查询 ---- */
 float   Tracking_GetYaw(void)       { return yaw_angle; }
-uint8_t Tracking_GetGS(void)        { return 0; }  /* deprecated, use raw */
+uint8_t Tracking_GetGS(void)        { return 0; }  /* 已弃用，使用raw */
 uint8_t Tracking_GetLost(void)      { return lost_flag; }
 const uint16_t *Tracking_GetGSRaw(void)
 {
@@ -269,7 +269,7 @@ const uint16_t *Tracking_GetGSRaw(void)
     return gs_raw;
 }
 
-/* ---- Parameter access ---- */
+/* ---- 参数访问 ---- */
 void    Tracking_SetBaseSpeed(int16_t v)    { SPD_BASE = v; }
 void    Tracking_SetSlightSpeed(int16_t v)  { SPD_SLIGHT = v; }
 void    Tracking_SetStrongSpeed(int16_t v)  { SPD_STRONG = v; }

@@ -4,16 +4,16 @@
 #include "cn_font.h"
 #include <string.h>
 
-/* FSMC Bank1 Sector4 (NE4): base = 0x6C000000
- *   FSMC_NE4  = PG12  -> chip select
- *   FSMC_NOE  = PD4   -> read enable
- *   FSMC_NWE  = PD5   -> write enable
- *   FSMC_A10  = PG0   -> RS (register select) for ILI9341
+/* FSMC Bank1 Sector4 (NE4)：基地址 = 0x6C000000
+ *   FSMC_NE4  = PG12  -> Chip Select
+ *   FSMC_NOE  = PD4   -> Read Enable
+ *   FSMC_NWE  = PD5   -> Write Enable
+ *   FSMC_A10  = PG0   -> RS（Register Select）
  *   FSMC_D0-D15 = PD14,PD15,PD0,PD1,PE7-PE12,PD8-PD10,PE13-PE15
- *   LCD_BL = PB0 (backlight, 底板硬连接)
+ *   LCD_BL = PB0（Backlight，底板硬连接）
  *
- * When RS=0 (A10=0): command register access (LCD->REG)
- * When RS=1 (A10=1): data bus access (LCD->RAM)
+ * RS=0 (A10=0)：Command Register 访问 (LCD->REG)
+ * RS=1 (A10=1)：Data Bus 访问 (LCD->RAM)
  */
 
 #define LCD_BASE    ((uint32_t)(0x6C000000 | 0x000007FE))
@@ -24,14 +24,14 @@ typedef struct {
     volatile uint16_t RAM;
 } LCD_TypeDef;
 
-/* Backlight pin (PB0, 底板硬连接，不可更改) */
+/* Backlight Pin（PB0，底板硬连接，不可更改） */
 #define LCD_BL_PORT   GPIOB
 #define LCD_BL_PIN    GPIO_Pin_0
 
 static uint16_t _lcd_w = LCD_W;
 static uint16_t _lcd_h = LCD_H;
 
-/* ---------- FSMC GPIO & init ---------- */
+/* ---------- FSMC GPIO与初始化 ---------- */
 static void LCD_FSMC_Init(void)
 {
     GPIO_InitTypeDef gpio;
@@ -47,7 +47,7 @@ static void LCD_FSMC_Init(void)
     RCC_APB2PeriphClockCmd(RCC_APB2Periph_GPIOB | RCC_APB2Periph_GPIOD |
                            RCC_APB2Periph_GPIOE | RCC_APB2Periph_GPIOG, ENABLE);
 
-    /* PORTD: PD0,1,4,5,8,9,10,14,15 (FSMC data/control, no PD13) */
+    /* PORTD：PD0,1,4,5,8,9,10,14,15（FSMC数据/控制，无PD13） */
     gpio.GPIO_Pin = GPIO_Pin_0 | GPIO_Pin_1 | GPIO_Pin_4 | GPIO_Pin_5 |
                     GPIO_Pin_8 | GPIO_Pin_9 | GPIO_Pin_10 |
                     GPIO_Pin_14 | GPIO_Pin_15;
@@ -55,22 +55,22 @@ static void LCD_FSMC_Init(void)
     gpio.GPIO_Speed = GPIO_Speed_50MHz;
     GPIO_Init(GPIOD, &gpio);
 
-    /* PORTE: PE7-PE15 */
+    /* PORTE：PE7-PE15 */
     gpio.GPIO_Pin = GPIO_Pin_7 | GPIO_Pin_8 | GPIO_Pin_9 | GPIO_Pin_10 |
                     GPIO_Pin_11 | GPIO_Pin_12 | GPIO_Pin_13 | GPIO_Pin_14 | GPIO_Pin_15;
     GPIO_Init(GPIOE, &gpio);
 
-    /* PORTG: PG0 (FSMC_A10 = RS), PG12 (NE4) */
+    /* PORTG：PG0 (FSMC_A10 = RS), PG12 (NE4) */
     gpio.GPIO_Pin = GPIO_Pin_0 | GPIO_Pin_12;
     GPIO_Init(GPIOG, &gpio);
 
-    /* Backlight (PB0, 底板硬连接) */
+    /* Backlight（PB0，底板硬连接） */
     gpio.GPIO_Pin   = LCD_BL_PIN;
     gpio.GPIO_Mode  = GPIO_Mode_Out_PP;
     gpio.GPIO_Speed = GPIO_Speed_50MHz;
     GPIO_Init(LCD_BL_PORT, &gpio);
 
-    /* FSMC read timing (LCD read is slower) */
+    /* FSMC读时序（LCD读较慢） */
     readTiming.FSMC_AddressSetupTime      = 0x01;  // 2 HCLK
     readTiming.FSMC_AddressHoldTime       = 0x00;
     readTiming.FSMC_DataSetupTime         = 0x0f;  // 16 HCLK
@@ -79,7 +79,7 @@ static void LCD_FSMC_Init(void)
     readTiming.FSMC_DataLatency           = 0x00;
     readTiming.FSMC_AccessMode            = FSMC_AccessMode_A;
 
-    /* FSMC write timing */
+    /* FSMC写时序 */
     writeTiming.FSMC_AddressSetupTime      = 0x00;  // 1 HCLK
     writeTiming.FSMC_AddressHoldTime       = 0x00;
     writeTiming.FSMC_DataSetupTime         = 0x03;  // 4 HCLK
@@ -107,7 +107,7 @@ static void LCD_FSMC_Init(void)
     FSMC_NORSRAMCmd(FSMC_Bank1_NORSRAM4, ENABLE);
 }
 
-/* ---------- Low-level register access ---------- */
+/* ---------- 底层 Register 访问 ---------- */
 void LCD_WR_REG(uint16_t reg)
 {
     LCD->REG = reg;
@@ -129,20 +129,20 @@ static void LCD_WriteReg(uint16_t reg, uint16_t val)
     LCD->RAM = val;
 }
 
-/* ---------- NT35510 initialization (official 正点原子 values) ---------- */
+/* ---------- NT35510 Init（正点原子官方值） ---------- */
 static void NT35510_Init(void)
 {
-    /* LV2 Page 1 enable */
+    /* LV2 Page 1 Enable */
     LCD_WriteReg(0xF000, 0x55);
     LCD_WriteReg(0xF001, 0xAA);
     LCD_WriteReg(0xF002, 0x52);
     LCD_WriteReg(0xF003, 0x08);
     LCD_WriteReg(0xF004, 0x01);
-    /* AVDD Set AVDD 5.2V */
+    /* AVDD 设置 5.2V */
     LCD_WriteReg(0xB000, 0x0D);
     LCD_WriteReg(0xB001, 0x0D);
     LCD_WriteReg(0xB002, 0x0D);
-    /* AVDD ratio */
+    /* AVDD 比率 */
     LCD_WriteReg(0xB600, 0x34);
     LCD_WriteReg(0xB601, 0x34);
     LCD_WriteReg(0xB602, 0x34);
@@ -150,7 +150,7 @@ static void NT35510_Init(void)
     LCD_WriteReg(0xB100, 0x0D);
     LCD_WriteReg(0xB101, 0x0D);
     LCD_WriteReg(0xB102, 0x0D);
-    /* AVEE ratio */
+    /* AVEE 比率 */
     LCD_WriteReg(0xB700, 0x34);
     LCD_WriteReg(0xB701, 0x34);
     LCD_WriteReg(0xB702, 0x34);
@@ -158,16 +158,16 @@ static void NT35510_Init(void)
     LCD_WriteReg(0xB200, 0x00);
     LCD_WriteReg(0xB201, 0x00);
     LCD_WriteReg(0xB202, 0x00);
-    /* VCL ratio */
+    /* VCL 比率 */
     LCD_WriteReg(0xB800, 0x24);
     LCD_WriteReg(0xB801, 0x24);
     LCD_WriteReg(0xB802, 0x24);
-    /* VGH 15V (Free pump) */
+    /* VGH 15V（自由泵） */
     LCD_WriteReg(0xBF00, 0x01);
     LCD_WriteReg(0xB300, 0x0F);
     LCD_WriteReg(0xB301, 0x0F);
     LCD_WriteReg(0xB302, 0x0F);
-    /* VGH ratio */
+    /* VGH 比率 */
     LCD_WriteReg(0xB900, 0x34);
     LCD_WriteReg(0xB901, 0x34);
     LCD_WriteReg(0xB902, 0x34);
@@ -176,7 +176,7 @@ static void NT35510_Init(void)
     LCD_WriteReg(0xB501, 0x08);
     LCD_WriteReg(0xB502, 0x08);
     LCD_WriteReg(0xC200, 0x03);
-    /* VGLX ratio */
+    /* VGLX 比率 */
     LCD_WriteReg(0xBA00, 0x24);
     LCD_WriteReg(0xBA01, 0x24);
     LCD_WriteReg(0xBA02, 0x24);
@@ -191,7 +191,7 @@ static void NT35510_Init(void)
     /* VCOM */
     LCD_WriteReg(0xBE00, 0x00);
     LCD_WriteReg(0xBE01, 0x64);
-    /* Gamma Setting (D1xx = positive gamma, D2xx = negative gamma) */
+    /* Gamma设置（D1xx = 正gamma, D2xx = 负gamma） */
     LCD_WriteReg(0xD100, 0x00); LCD_WriteReg(0xD101, 0x33);
     LCD_WriteReg(0xD102, 0x00); LCD_WriteReg(0xD103, 0x34);
     LCD_WriteReg(0xD104, 0x00); LCD_WriteReg(0xD105, 0x3A);
@@ -348,78 +348,78 @@ static void NT35510_Init(void)
     LCD_WriteReg(0xD62E, 0x03); LCD_WriteReg(0xD62F, 0x10);
     LCD_WriteReg(0xD630, 0x03); LCD_WriteReg(0xD631, 0x33);
     LCD_WriteReg(0xD632, 0x03); LCD_WriteReg(0xD633, 0x6D);
-    /* LV2 Page 0 enable */
+    /* LV2 Page 0 Enable */
     LCD_WriteReg(0xF000, 0x55);
     LCD_WriteReg(0xF001, 0xAA);
     LCD_WriteReg(0xF002, 0x52);
     LCD_WriteReg(0xF003, 0x08);
     LCD_WriteReg(0xF004, 0x00);
-    /* Display control */
+    /* 显示控制 */
     LCD_WriteReg(0xB100, 0xCC);
     LCD_WriteReg(0xB101, 0x00);
-    /* Source hold time */
+    /* 源极保持时间 */
     LCD_WriteReg(0xB600, 0x05);
-    /* Gate EQ control */
+    /* 栅极均衡控制 */
     LCD_WriteReg(0xB700, 0x70);
     LCD_WriteReg(0xB701, 0x70);
-    /* Source EQ control (Mode 2) */
+    /* 源极均衡控制（模式2） */
     LCD_WriteReg(0xB800, 0x01);
     LCD_WriteReg(0xB801, 0x03);
     LCD_WriteReg(0xB802, 0x03);
     LCD_WriteReg(0xB803, 0x03);
-    /* Inversion mode (2-dot) */
+    /* 反转模式（2点） */
     LCD_WriteReg(0xBC00, 0x02);
     LCD_WriteReg(0xBC01, 0x00);
     LCD_WriteReg(0xBC02, 0x00);
-    /* Timing control 4H w/ 4-delay */
+    /* 时序控制 4H / 4延迟 */
     LCD_WriteReg(0xC900, 0xD0);
     LCD_WriteReg(0xC901, 0x02);
     LCD_WriteReg(0xC902, 0x50);
     LCD_WriteReg(0xC903, 0x50);
     LCD_WriteReg(0xC904, 0x50);
     LCD_WriteReg(0x3500, 0x00);
-    LCD_WriteReg(0x3A00, 0x55); /* 16-bit/pixel */
-    /* Exit sleep */
+    LCD_WriteReg(0x3A00, 0x55); /* 16位/像素 */
+    /* 退出睡眠 */
     LCD_WR_REG(0x1100);
     delay_us(120000);
-    /* Display on */
+    /* 显示开启 */
     LCD_WR_REG(0x2900);
 }
 
-/* ---------- Public API ---------- */
+/* ---------- 公共接口 ---------- */
 
 uint16_t LCD_ReadID(void)
 {
     uint16_t id;
 
-    /* Try ILI9341 (0xD3) */
+    /* 尝试 ILI9341 (0xD3) */
     LCD_WR_REG(0xD3);
-    id = LCD_RD_DATA();  // dummy read
+    id = LCD_RD_DATA();  // 空读
     id = LCD_RD_DATA();  // 0x00
     id = LCD_RD_DATA();  // 0x93
     id <<= 8;
     id |= LCD_RD_DATA(); // 0x41
     if (id == 0x9341) return id;
 
-    /* Try ST7789 (0x04) */
+    /* 尝试 ST7789 (0x04) */
     LCD_WR_REG(0x04);
-    id = LCD_RD_DATA();  // dummy
+    id = LCD_RD_DATA();  // 空读
     id = LCD_RD_DATA();  // 0x85
     id = LCD_RD_DATA();  // 0x85
     id <<= 8;
     id |= LCD_RD_DATA(); // 0x52
     if (id == 0x8552) return 0x7789;
 
-    /* Try NT35310 (0xD4) */
+    /* 尝试 NT35310 (0xD4) */
     LCD_WR_REG(0xD4);
-    id = LCD_RD_DATA();  // dummy
+    id = LCD_RD_DATA();  // 空读
     id = LCD_RD_DATA();  // 0x01
     id = LCD_RD_DATA();  // 0x53
     id <<= 8;
     id |= LCD_RD_DATA(); // 0x10
     if (id == 0x5310) return id;
 
-    /* Try NT35510 (0xC500/0xC501) */
+    /* 尝试 NT35510 (0xC500/0xC501) */
     LCD_WriteReg(0xF000, 0x0055);
     LCD_WriteReg(0xF001, 0x00AA);
     LCD_WriteReg(0xF002, 0x0052);
@@ -432,7 +432,7 @@ uint16_t LCD_ReadID(void)
     id |= LCD_RD_DATA();
     if (id == 0x5510) return id;
 
-    return 0;  /* Unknown or no communication */
+    return 0;  /* 未知或无通信 */
 }
 
 void LCD_Init(void)
@@ -440,27 +440,27 @@ void LCD_Init(void)
     uint16_t id;
 
     LCD_FSMC_Init();
-    delay_us(50000);  // 50ms wait after FSMC init
+    delay_us(50000);  // FSMC初始化后等待50ms
 
-    /* Turn on backlight first */
+    /* 先开启 Backlight */
     GPIO_SetBits(LCD_BL_PORT, LCD_BL_PIN);
 
-    /* Read LCD ID (multi-controller) */
+    /* 读取LCD ID（多控制器兼容） */
     id = LCD_ReadID();
     Debug_Printf("LCD ID: 0x%04X\r\n", id);
 
-    /* Init LCD registers (NT35510) */
+    /* 初始化LCD Register（NT35510） */
     NT35510_Init();
-    delay_us(120000);  // 120ms after sleep exit
+    delay_us(120000);  // 退出睡眠后等待120ms
 
-    /* Set orientation: landscape 800x480 (NT35510 uses 0x3600) */
-    /* Bit layout: MY(7) MX(6) MV(5) ML(4) BGR(3) MH(2) */
-    /* Matches official 正点原子 code: D2U_L2R = MY=1, MV=1 -> 0xA0 */
+    /* 设置方向：横屏 800x480（NT35510 使用 0x3600） */
+    /* 位布局：MY(7) MX(6) MV(5) ML(4) BGR(3) MH(2) */
+    /* 匹配正点原子官方代码：D2U_L2R = MY=1, MV=1 -> 0xA0 */
     LCD_WriteReg(0x3600, 0xA0);
     _lcd_w = 800;
     _lcd_h = 480;
 
-    /* Set address window to full screen (NT35510 format) */
+    /* 设置地址窗口为全屏（NT35510格式） */
     LCD_WriteReg(0x2A00, 0x00); LCD_WriteReg(0x2A01, 0x00);
     LCD_WriteReg(0x2A02, (_lcd_w - 1) >> 8);
     LCD_WriteReg(0x2A03, (_lcd_w - 1) & 0xFF);
@@ -468,25 +468,25 @@ void LCD_Init(void)
     LCD_WriteReg(0x2B02, (_lcd_h - 1) >> 8);
     LCD_WriteReg(0x2B03, (_lcd_h - 1) & 0xFF);
 
-    /* Clear screen to black */
+    /* 清屏为黑色 */
     LCD_Clear(BLACK);
 }
 
 void LCD_SetWindow(uint16_t x0, uint16_t y0, uint16_t x1, uint16_t y1)
 {
-    /* NT35510: column address set (0x2A00-0x2A03) */
+    /* NT35510：列地址设置（0x2A00-0x2A03） */
     LCD_WriteReg(0x2A00, x0 >> 8);
     LCD_WriteReg(0x2A01, x0 & 0xFF);
     LCD_WriteReg(0x2A02, x1 >> 8);
     LCD_WriteReg(0x2A03, x1 & 0xFF);
 
-    /* NT35510: page address set (0x2B00-0x2B03) */
+    /* NT35510：页地址设置（0x2B00-0x2B03） */
     LCD_WriteReg(0x2B00, y0 >> 8);
     LCD_WriteReg(0x2B01, y0 & 0xFF);
     LCD_WriteReg(0x2B02, y1 >> 8);
     LCD_WriteReg(0x2B03, y1 & 0xFF);
 
-    /* NT35510: memory write (0x2C00) */
+    /* NT35510：内存写入（0x2C00） */
     LCD_WR_REG(0x2C00);
 }
 
@@ -547,9 +547,9 @@ void LCD_DrawRect(uint16_t x, uint16_t y, uint16_t w, uint16_t h, uint16_t color
     LCD_DrawLine(x, y + h - 1, x, y, color);
 }
 
-/* ASCII 8x16 font (included below) */
+/* ASCII 8x16 字模（内含） */
 static const uint8_t ASCII_1608[][16] = {
-    /* Space (0x20) */
+    /* 空格 (0x20) */
     {0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00},
     /* ! */
     {0x00,0x00,0x18,0x18,0x18,0x18,0x18,0x18,0x18,0x00,0x18,0x18,0x00,0x00,0x00,0x00},
@@ -780,11 +780,11 @@ void LCD_ShowNum(uint16_t x, uint16_t y, int32_t num, uint8_t len, uint16_t colo
     }
     if (neg) buf[i++] = '-';
 
-    /* pad with spaces */
+    /* 用空格填充 */
     while (i < len && i < 15) buf[i++] = ' ';
     buf[i] = 0;
 
-    /* reverse */
+    /* 反转 */
     { int j; for (j = 0; j < i / 2; j++) { char t = buf[j]; buf[j] = buf[i - 1 - j]; buf[i - 1 - j] = t; } }
 
     LCD_ShowString(x, y, buf, color, bg, size);
@@ -796,18 +796,18 @@ void LCD_DrawButton(uint16_t x, uint16_t y, uint16_t w, uint16_t h, const char *
     uint16_t tw = 0;
     const char *p = text;
 
-    /* Draw filled rectangle with border */
+    /* 绘制带边框的填充矩形 */
     LCD_FillRect(x + 2, y + 2, w - 4, h - 4, bg);
     LCD_DrawRect(x, y, w, h, fg);
 
-    /* Center text */
+    /* 文本居中 */
     while (*p) { tw += 8; p++; }
     tx = x + (w - tw) / 2;
     ty = y + (h - 16) / 2;
     LCD_ShowString(tx, ty, text, fg, bg, 16);
 }
 
-/* ========== Chinese character rendering ========== */
+/* ========== 中文字符渲染 ========== */
 
 static const uint8_t *CN_Lookup(const uint8_t *gb_ch)
 {
@@ -844,12 +844,12 @@ void LCD_ShowMixedString(uint16_t x, uint16_t y, const char *str, uint16_t color
 {
     while (*str) {
         if ((uint8_t)*str < 0x80) {
-            /* ASCII character: 8 pixels wide */
+            /* ASCII字符：8像素宽 */
             LCD_ShowChar(x, y, *str, color, bg, 16);
             x += 8;
             str++;
         } else {
-            /* Chinese character (GB2312, 2 bytes): 16 pixels wide */
+            /* 中文字符（GB2312，2字节）：16像素宽 */
             LCD_ShowChinese(x, y, str, color, bg);
             x += 16;
             str += 2;
@@ -862,17 +862,17 @@ void LCD_DrawButtonCN(uint16_t x, uint16_t y, uint16_t w, uint16_t h, const char
     uint16_t tw = 0;
     const char *p = text;
 
-    /* Draw filled rectangle with border */
+    /* 绘制带边框的填充矩形 */
     LCD_FillRect(x + 2, y + 2, w - 4, h - 4, bg);
     LCD_DrawRect(x, y, w, h, fg);
 
-    /* Calculate text width: ASCII=8px, Chinese=16px */
+    /* 计算文本宽度：ASCII=8px, 中文=16px */
     while (*p) {
         if ((uint8_t)*p < 0x80) { tw += 8; p++; }
         else { tw += 16; p += 2; }
     }
 
-    /* Center text */
+    /* 文本居中 */
     {
         uint16_t tx = x + (w - tw) / 2;
         uint16_t ty = y + (h - 16) / 2;

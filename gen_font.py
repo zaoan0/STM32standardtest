@@ -9,7 +9,7 @@ FONT_PATH = r'C:\Windows\Fonts\simhei.ttf'
 FONT_SIZE = 16
 
 # All unique Chinese characters used in the UI
-CHARS = '选择模式循迹小车陀螺仪直线待开发返回停止参数调节基准微强弱力状态运行中已目标角度速始敬请期待校准请保持偏差丢失检测修正成减增'
+CHARS = '选择模式循迹小车陀螺仪直线待开发返回停止参数调节基准微强弱力状态运行中已目标角度速始敬请期待校准请保持偏差丢失检测修正成减加快慢'
 
 def char_to_bitmap(ch, font):
     img = Image.new('1', (16, 16), 0)
